@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Sigue la historia</title>
+        <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    </head>
+    <body>
+        <div class="container grid-md">
+            <h1 class="mt-2 text-center">Sigue la historia</h1>
+            <div class="columns">
+                <aside class="column col-4">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Nombre
+                            <input id="nombre" class="form-input" type="text" placeholder="John Doe">
+                        </label>
+                    </div>
+                </aside>
+                <main class="column">
+                    <section id="mensajes"></section>
+                    <section class="form-group">
+                        <input id="texto" class="form-input" type="text" placeholder="Nuevo mensaje...">
+                        <button id="enviar" class="btn btn-block">Enviar</button>
+                    </section>
+                </main>
+            </div>
+        </div>
+        <!-- The core Firebase JS SDK is always required and must be listed first -->
+        <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
+
+        <script>
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyCQTzlr3KFeg56emiY3EVFXW7xkLcqpJs8",
+            authDomain: "drawandwrite-ea3ef.firebaseapp.com",
+            databaseURL: "https://drawandwrite-ea3ef-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "drawandwrite-ea3ef",
+            storageBucket: "drawandwrite-ea3ef.appspot.com",
+            messagingSenderId: "372359218861",
+            appId: "1:372359218861:web:70aad48fdbf1da5e912824",
+            measurementId: "G-P8HNCYL10F"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        var firestore = firebase.firestore();
+
+        console.log("Page location is " + window.location.href);
+        </script>
+
+        <script>
+            const docRef = firestore.collection("samples");
+            const CAMPO_NOMBRE = document.querySelector('#nombre');
+            const MENSAJES = document.querySelector('#mensajes');
+            const CAMPO_TEXTO = document.querySelector('#texto');
+            const BOTON_ENVIAR = document.querySelector('#enviar');
+
+         /**
+          * Método que añade un nuevo mensaje en el HTML (#mensajes)
+          */
+         function anyadirNuevoMensajeAlHTML(nombre, texto, propio = false){
+             // Contenedor
+             const MI_CONTENEDOR = document.createElement('div');
+             MI_CONTENEDOR.classList.add(propio ? 'bg-primary' : 'bg-secondary', 'p-2');
+             // Nombre
+             const MI_NOMBRE = document.createElement('h2');
+             MI_NOMBRE.classList.add('text-tiny', 'text-bold', 'mt-2');
+             MI_NOMBRE.textContent = nombre;
+             MI_CONTENEDOR.appendChild(MI_NOMBRE);
+             // Texto
+             const MI_TEXTO = document.createElement('p');
+             MI_TEXTO.classList.add('my-2');
+             MI_TEXTO.textContent = texto;
+             MI_CONTENEDOR.appendChild(MI_TEXTO);
+             // Anyade todo a MENSAJES
+             MENSAJES.appendChild(MI_CONTENEDOR);
+         }
+
+         function enviarNuevoMensaje() {
+             /*
+            let nuevoChatRef = chatelement.push();
+            nuevoChatRef.set({
+                nombre: CAMPO_NOMBRE.value,
+                mensaje: CAMPO_TEXTO.value,
+            });
+
+            */
+           docRef.add({nombre: CAMPO_NOMBRE.value,hotDogStatus: CAMPO_TEXTO.value});
+          // docRef.set({nombre: CAMPO_NOMBRE.value,hotDogStatus: CAMPO_TEXTO.value});
+
+          // docRef.get().then(function (doc){console.log("-->"+doc.data())});
+
+            anyadirNuevoMensajeAlHTML(CAMPO_NOMBRE.value,CAMPO_TEXTO.value,true);
+             
+             CAMPO_TEXTO.value = '';
+             CAMPO_TEXTO.focus();
+         }
+
+         // Enviar mensaje cuando se pulsa en el botón Enviar
+         BOTON_ENVIAR.addEventListener('click', enviarNuevoMensaje);
+
+         // Enviar mensaje cuando se pulsa en el teclado Enter
+         CAMPO_TEXTO.addEventListener('keyup', (e) => e.keyCode === 13 ? enviarNuevoMensaje() : false);
+        </script>
+    </body>
+</html>
