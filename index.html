@@ -27,7 +27,7 @@
                     <div class="form-group">
                         <label class="form-label">
                             Nombre
-                            <input id="nombre" class="form-input" type="text" placeholder="John Doe">
+                            <input id="nombre" class="form-input" type="text" placeholder="Tu nombre aqui">
                         </label>
                     </div>
 					<div class="form-group finaliza-group">
@@ -72,10 +72,13 @@ const CAMPO_NOMBRE = document.querySelector('#nombre');
 const MENSAJES = document.querySelector('#mensajes');
 const CAMPO_TEXTO = document.querySelector('#input-texto-enviar');
 const BOTON_ENVIAR = document.querySelector('#enviar');
+const BOTON_FINALIZAR = document.querySelector('#finalizar');
 const CANVAS = document.getElementById("canvas");
 var firsttime;
 var canvasEnable;
 var currentType;
+var collectionLoaded;
+var lastEmpty;
 
 // Obtengo el master que me dirá:
 // 1- Si es la primera vez que ejecuto el codigo, es decir la BBDD está vacia. En cuyo caso la crearé
@@ -102,14 +105,14 @@ function checkLastDocType() {
 			querySnapshot.forEach((doc) => {
 				var docTimestamp = Date.now();
 				// Obtengo el ultimo doc de la colleccion que acabo de averiguar
-				var collectionLoaded = doc.data().lastCollection;
+				collectionLoaded = doc.data().lastCollection;
 				firestore.collection("" + collectionLoaded).get().then(function (doc) {
 					if (doc.empty) {
-						loadLastElement(true, collectionLoaded);
-
+						lastEmpty = true;
 					} else {
-						loadLastElement(false, collectionLoaded);
+						lastEmpty = false;
 					}
+					loadLastElement(collectionLoaded);
 				});
 			});
 		})
@@ -118,8 +121,8 @@ function checkLastDocType() {
 		});
 }
 
-function loadLastElement(empty, collection) {
-	if (empty) {
+function loadLastElement(collection) {
+	if (lastEmpty) {
 
 	} else {
 		//primero necesito obtener el tipo de elemento
@@ -127,127 +130,204 @@ function loadLastElement(empty, collection) {
 			.get()
 			.then((querySnapshot) => {
 				querySnapshot.forEach((doc) => {
-					
-					if (doc.data().type == 2){
-						
-						currentType=2;
+
+					if (doc.data().type == 2) {
+
+						currentType = 2;
 						canvasEnable = false;
-							var image = new Image;
+						var image = new Image;
 						image.src = doc.data().image;
-						image.onload = function(){
-							
-						//getContextCanvas().scale(300 * resWidth, 150 * resHeight);
-							getContextCanvas().drawImage(image,0,0,resWidth,resHeight);
-							
-							
-							
-}
+						image.onload = function () {
+							getContextCanvas().drawImage(image, 0, 0, resWidth, resHeight);
+						}
 					}
-					if (doc.data().type == 1){
-						
-						currentType=1;
+					if (doc.data().type == 1) {
+
+						currentType = 1;
 						$("#input-texto-enviar").attr("placeholder", doc.data().text);
-						$( "#input-texto-enviar" ).prop( "disabled", true );
-						canvasEnable=true;
-					} 
+						$("#input-texto-enviar").prop("disabled", true);
+						canvasEnable = true;
+					}
 				});
 			})
 			.catch((error) => {
 				console.log("Error getting documents: ", error);
 			});
 	}
-}
-
-
-
-//Método que añade un nuevo mensaje en el HTML (#mensajes)
-function anyadirNuevoMensajeAlHTML(nombre, texto, propio = false) {
-	// Contenedor
-	const MI_CONTENEDOR = document.createElement('div');
-	MI_CONTENEDOR.classList.add(propio ? 'bg-primary' : 'bg-secondary', 'p-2');
-	// Nombre
-	const MI_NOMBRE = document.createElement('h2');
-	MI_NOMBRE.classList.add('text-tiny', 'text-bold', 'mt-2');
-	MI_NOMBRE.textContent = nombre;
-	MI_CONTENEDOR.appendChild(MI_NOMBRE);
-	// Texto
-	const MI_TEXTO = document.createElement('p');
-	MI_TEXTO.classList.add('my-2');
-	MI_TEXTO.textContent = texto;
-	MI_CONTENEDOR.appendChild(MI_TEXTO);
-	// Anyade todo a MENSAJES
-	MENSAJES.appendChild(MI_CONTENEDOR);
 }
 
 function enviarNuevoMensaje() {
-console.log("CLICKED");
-	if (CAMPO_NOMBRE.value == '' ) alert("Inserta nombre");
-	if (CAMPO_NOMBRE.value != '' || CAMPO_TEXTO.value != '') {
+	if (CAMPO_NOMBRE.value == '') alert("Inserta nombre");
+	if (lastEmpty) {
 		var CAMPOTEXTO = CAMPO_TEXTO.value;
 		var CAMPONOMBRE = CAMPO_NOMBRE.value;
+		var docTimestamp = Date.now();
+		firestore.doc(collectionLoaded + "/" + docTimestamp + "_1").set({
+				id: docTimestamp + "_1",
+				type: 1, //1=texto,2=imagen (siempre empezamos con texto)
+				user: CAMPONOMBRE,
+				text: CAMPOTEXTO,
+				image: null,
+				stream: collectionLoaded,
+			})
 
-		firestore.collection("master").orderBy("lastCollection", "desc").limit(1)
-			.get()
-			.then((querySnapshot) => {
-				querySnapshot.forEach((doc) => {
-					var docTimestamp = Date.now();
-					var thisType;
-					var imageCanvas;
-					switch (currentType) {
-						case 1:
-							thisType=2;
-							CAMPOTEXTO="";
-							imageCanvas=CANVAS.toDataURL("image/png")
-							break;
-						case 2:
-							thisType=1;
-							imageCanvas = null
-							break;
-						default:
-							break;
-					}
-					
-					firestore.doc(doc.data().lastCollection + "/" + docTimestamp + "_1").set({
-						id: docTimestamp + "_1",
-						type: thisType, //1=texto,2=imagen (siempre empezamos con texto)
-						user: CAMPONOMBRE,
-						text: CAMPOTEXTO,
-						image: imageCanvas,
-						stream: docTimestamp,
-					})
-					
-					.then(() => {
-						window.location.reload();
-						canvasEnable = false;
-						$( "#input-texto-enviar" ).prop( "disabled", true );
-						console.log(resWidth+" "+resHeight);
-					})
-					.catch((error) => {
-						console.error("Error writing document: ", error);
-					});
-
-				});
+			.then(() => {
+				window.location.reload();
+				canvasEnable = false;
+				$("#input-texto-enviar").prop("disabled", true);
+				console.log(resWidth + " " + resHeight);
 			})
 			.catch((error) => {
-				console.log("Error getting documents: ", error);
+				console.error("Error writing document: ", error);
 			});
 
-		//anyadirNuevoMensajeAlHTML(CAMPO_NOMBRE.value, CAMPO_TEXTO.value, true);
-		
-		CAMPO_TEXTO.value = '';
-		CAMPO_TEXTO.focus();
-		
+
+	} else {
+
+
+		if (CAMPO_NOMBRE.value != '' || CAMPO_TEXTO.value != '') {
+			var CAMPOTEXTO = CAMPO_TEXTO.value;
+			var CAMPONOMBRE = CAMPO_NOMBRE.value;
+
+			firestore.collection("master").orderBy("lastCollection", "desc").limit(1)
+				.get()
+				.then((querySnapshot) => {
+					querySnapshot.forEach((doc) => {
+						var docTimestamp = Date.now();
+						var thisType;
+						var imageCanvas;
+						switch (currentType) {
+							case 1:
+								thisType = 2;
+								CAMPOTEXTO = "";
+								imageCanvas = CANVAS.toDataURL("image/png")
+								break;
+							case 2:
+								thisType = 1;
+								imageCanvas = null
+								break;
+							default:
+								break;
+						}
+
+						firestore.doc(doc.data().lastCollection + "/" + docTimestamp + "_1").set({
+								id: docTimestamp + "_1",
+								type: thisType, //1=texto,2=imagen (siempre empezamos con texto)
+								user: CAMPONOMBRE,
+								text: CAMPOTEXTO,
+								image: imageCanvas,
+								stream: collectionLoaded,
+							})
+
+							.then(() => {
+								window.location.reload();
+								canvasEnable = false;
+								$("#input-texto-enviar").prop("disabled", true);
+								console.log(resWidth + " " + resHeight);
+							})
+							.catch((error) => {
+								console.error("Error writing document: ", error);
+							});
+
+					});
+				})
+				.catch((error) => {
+					console.log("Error getting documents: ", error);
+				});
+
+			//anyadirNuevoMensajeAlHTML(CAMPO_NOMBRE.value, CAMPO_TEXTO.value, true);
+
+			CAMPO_TEXTO.value = '';
+			CAMPO_TEXTO.focus();
+
+		}
 	}
+
 
 }
 
-// Enviar mensaje cuando se pulsa en el botón Enviar
+function finalizarsstream() {
+	$("#mensajes").html("");
+	var cont = 0;
+	var streamTexts = [];
+	var streamImages = [];
+	canvasEnable = false;
+	firestore.collection("" + collectionLoaded).orderBy("id")
+		.get()
+		.then((querySnapshot) => {
+			querySnapshot.forEach((doc) => {
+				cont++;
+
+				switch (doc.data().type) {
+					case 1:
+						//$("#mensajes").append('<p>' + doc.data().text + '</p>');
+						streamTexts.push(doc.data().text);
+						break;
+					case 2:
+						streamImages.push(doc.data().image);
+						/*
+						canvasEnable = false;
+						var image = new Image;
+						image.src = doc.data().image;
+						var canvasName = "canvas" + cont;
+						image.onload = function () {
+							
+							$("#mensajes").append('<p>'+streamTexts[cont-1]+'</p><p><canvas id="' + canvasName + '"></canvas></p>');
+							var contextID = document.getElementById(canvasName).getContext("2d");
+							contextID.drawImage(image, 0, 0);
+						}
+						*/
+
+
+
+
+						break;
+					default:
+						break;
+				}
+
+			});
+
+			
+			for (var i=0; i<streamTexts.length; i++) { 
+				$("#mensajes").append('<p>'+ streamTexts[i] + '</p>');
+				var canvasName = "canvas" + i;
+				$("#mensajes").append('<p><canvas id="' + canvasName + '"></canvas></p>');
+			}
+
+			for (var i=0; i<streamImages.length; i++) { 
+
+				loadImageToCanvas(i,streamImages[i]);
+				
+			}
+
+
+
+
+
+		})
+		.catch((error) => {
+			console.log("Error getting documents: ", error);
+		});
+}
+
+function loadImageToCanvas(i,dataImage){
+	var image = new Image;
+				image.src = dataImage;
+				image.onload = function () {
+						var contextID = document.getElementById("canvas"+i).getContext("2d");
+						contextID.drawImage(image, 0, 0);
+						contextID.scale(300 / resWidth, 150 / resHeight);
+				}
+}
+
 BOTON_ENVIAR.addEventListener('click', enviarNuevoMensaje);
 
-// Enviar mensaje cuando se pulsa en el teclado Enter
+BOTON_FINALIZAR.addEventListener('click', finalizarsstream);
+
 CAMPO_TEXTO.addEventListener('keyup', (e) => e.keyCode === 13 ? enviarNuevoMensaje() : false);
 
-function getContextCanvas(){
+function getContextCanvas() {
 	if (canvas != null) {
 		return context = document.getElementById('canvas').getContext("2d");
 	}
@@ -268,34 +348,34 @@ if (canvas != null) {
 	context.scale(300 / resWidth, 150 / resHeight);
 
 	$('#canvas').mousedown(function (e) {
-		if(canvasEnable){
-		paint = true;
-		getMousePos(e)
-		addClick(xx, yy);
-		redraw();
+		if (canvasEnable) {
+			paint = true;
+			getMousePos(e)
+			addClick(xx, yy);
+			redraw();
 		}
 	});
 
 	$('#canvas').mousemove(function (e) {
-		if(canvasEnable){
-		if (paint) {
-			getMousePos(e)
-			addClick(xx, yy, true);
-			redraw();
+		if (canvasEnable) {
+			if (paint) {
+				getMousePos(e)
+				addClick(xx, yy, true);
+				redraw();
+			}
 		}
-	}
 	});
 
 	$('#canvas').mouseup(function (e) {
-		if(canvasEnable){
-			
-		paint = false;
+		if (canvasEnable) {
+
+			paint = false;
 		}
 	});
 
 	$('#canvas').mouseleave(function (e) {
-		if(canvasEnable){
-		paint = false;
+		if (canvasEnable) {
+			paint = false;
 		}
 	});
 
