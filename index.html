@@ -2,106 +2,334 @@
 <html lang="es">
     <head>
         <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Sigue la historia</title>
-        <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+        <link href="https://getbootstrap.com/docs/4.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+        <link href="http://fonts.cdnfonts.com/css/highway-gothic" rel="stylesheet">
+        <style>
+          body{margin-top: 2em; margin-bottom: 2em;  font-size: 1.5em;font-family: 'Highway Gothic', sans-serif;}
+          .container{background-color: #EFF;}
+          .name-container{background-color: #CCC; text-align: center;padding-top: 1em;}
+          .chat-container{background-color: #CCC; padding-top: 1em; }
+          #nombre{display: block; width: 100%;}
+          #mensajes{min-height: 10em; }
+          #input-texto-enviar{width: 100%;}
+          #canvas{background-color: #EEE; width:100%}
+		  .finaliza-group{position:absolute;bottom:0;width:100%}
+        </style>
     </head>
     <body>
-        <div class="container grid-md">
-            <h1 class="mt-2 text-center">Sigue la historia</h1>
-            <div class="columns">
-                <aside class="column col-4">
+   
+      <div class="container">
+            <div class="row">
+                <div class="col-3 name-container">
                     <div class="form-group">
                         <label class="form-label">
                             Nombre
                             <input id="nombre" class="form-input" type="text" placeholder="John Doe">
                         </label>
                     </div>
-                </aside>
-                <main class="column">
-                    <section id="mensajes"></section>
-                    <section class="form-group">
-                        <input id="texto" class="form-input" type="text" placeholder="Nuevo mensaje...">
-                        <button id="enviar" class="btn btn-block">Enviar</button>
+					<div class="form-group finaliza-group">
+						<button id="finalizar" class="btn btn-block btn btn-secondary">Finalizar Serie</button>
+					</div>
+					
+                </div>
+                <div class="col-9 chat-container">
+                    <section id="mensajes">
+                        <canvas id="canvas"></canvas>
                     </section>
-                </main>
-            </div>
-        </div>
-        <!-- The core Firebase JS SDK is always required and must be listed first -->
+                    <section class="form-group">
+                        <input id="input-texto-enviar" class="form-input" type="text" placeholder="Describe lo que ves o inventa algo">
+                        <button id="enviar" class="btn btn-block btn btn-secondary">Enviar</button>
+                    </section>
+                </div>
+              </div>
+          </div>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
         <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
         <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
 
         <script>
-        // Your web app's Firebase configuration
-        var firebaseConfig = {
-            apiKey: "AIzaSyCQTzlr3KFeg56emiY3EVFXW7xkLcqpJs8",
-            authDomain: "drawandwrite-ea3ef.firebaseapp.com",
-            databaseURL: "https://drawandwrite-ea3ef-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "drawandwrite-ea3ef",
-            storageBucket: "drawandwrite-ea3ef.appspot.com",
-            messagingSenderId: "372359218861",
-            appId: "1:372359218861:web:70aad48fdbf1da5e912824",
-            measurementId: "G-P8HNCYL10F"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        var firestore = firebase.firestore();
+var firebaseConfig = {
+	apiKey: "AIzaSyCQTzlr3KFeg56emiY3EVFXW7xkLcqpJs8",
+	authDomain: "drawandwrite-ea3ef.firebaseapp.com",
+	databaseURL: "https://drawandwrite-ea3ef-default-rtdb.europe-west1.firebasedatabase.app",
+	projectId: "drawandwrite-ea3ef",
+	storageBucket: "drawandwrite-ea3ef.appspot.com",
+	messagingSenderId: "372359218861",
+	appId: "1:372359218861:web:70aad48fdbf1da5e912824",
+	measurementId: "G-P8HNCYL10F"
+};
+firebase.initializeApp(firebaseConfig);
+var firestore = firebase.firestore();
+var dataimageloaded;
 
-        console.log("Page location is " + window.location.href);
-        </script>
 
-        <script>
-            const docRef = firestore.collection("samples");
-            const CAMPO_NOMBRE = document.querySelector('#nombre');
-            const MENSAJES = document.querySelector('#mensajes');
-            const CAMPO_TEXTO = document.querySelector('#texto');
-            const BOTON_ENVIAR = document.querySelector('#enviar');
+const CAMPO_NOMBRE = document.querySelector('#nombre');
+const MENSAJES = document.querySelector('#mensajes');
+const CAMPO_TEXTO = document.querySelector('#input-texto-enviar');
+const BOTON_ENVIAR = document.querySelector('#enviar');
+const CANVAS = document.getElementById("canvas");
+var firsttime;
+var canvasEnable;
+var currentType;
 
-         /**
-          * Método que añade un nuevo mensaje en el HTML (#mensajes)
-          */
-         function anyadirNuevoMensajeAlHTML(nombre, texto, propio = false){
-             // Contenedor
-             const MI_CONTENEDOR = document.createElement('div');
-             MI_CONTENEDOR.classList.add(propio ? 'bg-primary' : 'bg-secondary', 'p-2');
-             // Nombre
-             const MI_NOMBRE = document.createElement('h2');
-             MI_NOMBRE.classList.add('text-tiny', 'text-bold', 'mt-2');
-             MI_NOMBRE.textContent = nombre;
-             MI_CONTENEDOR.appendChild(MI_NOMBRE);
-             // Texto
-             const MI_TEXTO = document.createElement('p');
-             MI_TEXTO.classList.add('my-2');
-             MI_TEXTO.textContent = texto;
-             MI_CONTENEDOR.appendChild(MI_TEXTO);
-             // Anyade todo a MENSAJES
-             MENSAJES.appendChild(MI_CONTENEDOR);
-         }
+// Obtengo el master que me dirá:
+// 1- Si es la primera vez que ejecuto el codigo, es decir la BBDD está vacia. En cuyo caso la crearé
+// 2- 
+firestore.collection("master").get().then(function (doc) {
+	if (doc.empty) {
+		var colTimestamp = Date.now();
+		firestore.doc("master/data").set({
+			lastCollection: colTimestamp
+		});
+		firsttime = true;
+		checkLastDocType();
+	} else {
+		firsttime = false;
+		checkLastDocType();
+	}
+});
 
-         function enviarNuevoMensaje() {
-             /*
-            let nuevoChatRef = chatelement.push();
-            nuevoChatRef.set({
-                nombre: CAMPO_NOMBRE.value,
-                mensaje: CAMPO_TEXTO.value,
-            });
+// 
+function checkLastDocType() {
+	firestore.collection("master").orderBy("lastCollection", "desc").limit(1)
+		.get()
+		.then((querySnapshot) => {
+			querySnapshot.forEach((doc) => {
+				var docTimestamp = Date.now();
+				// Obtengo el ultimo doc de la colleccion que acabo de averiguar
+				var collectionLoaded = doc.data().lastCollection;
+				firestore.collection("" + collectionLoaded).get().then(function (doc) {
+					if (doc.empty) {
+						loadLastElement(true, collectionLoaded);
 
-            */
-           docRef.add({nombre: CAMPO_NOMBRE.value,hotDogStatus: CAMPO_TEXTO.value});
-          // docRef.set({nombre: CAMPO_NOMBRE.value,hotDogStatus: CAMPO_TEXTO.value});
+					} else {
+						loadLastElement(false, collectionLoaded);
+					}
+				});
+			});
+		})
+		.catch((error) => {
+			console.log("Error getting documents: ", error);
+		});
+}
 
-          // docRef.get().then(function (doc){console.log("-->"+doc.data())});
+function loadLastElement(empty, collection) {
+	if (empty) {
 
-            anyadirNuevoMensajeAlHTML(CAMPO_NOMBRE.value,CAMPO_TEXTO.value,true);
-             
-             CAMPO_TEXTO.value = '';
-             CAMPO_TEXTO.focus();
-         }
+	} else {
+		//primero necesito obtener el tipo de elemento
+		firestore.collection("" + collection).orderBy("id", "desc").limit(1)
+			.get()
+			.then((querySnapshot) => {
+				querySnapshot.forEach((doc) => {
+					
+					if (doc.data().type == 2){
+						
+						currentType=2;
+						canvasEnable = false;
+							var image = new Image;
+						image.src = doc.data().image;
+						image.onload = function(){
+							
+						//getContextCanvas().scale(300 * resWidth, 150 * resHeight);
+							getContextCanvas().drawImage(image,0,0,resWidth,resHeight);
+							
+							
+							
+}
+					}
+					if (doc.data().type == 1){
+						
+						currentType=1;
+						$("#input-texto-enviar").attr("placeholder", doc.data().text);
+						$( "#input-texto-enviar" ).prop( "disabled", true );
+						canvasEnable=true;
+					} 
+				});
+			})
+			.catch((error) => {
+				console.log("Error getting documents: ", error);
+			});
+	}
+}
 
-         // Enviar mensaje cuando se pulsa en el botón Enviar
-         BOTON_ENVIAR.addEventListener('click', enviarNuevoMensaje);
 
-         // Enviar mensaje cuando se pulsa en el teclado Enter
-         CAMPO_TEXTO.addEventListener('keyup', (e) => e.keyCode === 13 ? enviarNuevoMensaje() : false);
+
+//Método que añade un nuevo mensaje en el HTML (#mensajes)
+function anyadirNuevoMensajeAlHTML(nombre, texto, propio = false) {
+	// Contenedor
+	const MI_CONTENEDOR = document.createElement('div');
+	MI_CONTENEDOR.classList.add(propio ? 'bg-primary' : 'bg-secondary', 'p-2');
+	// Nombre
+	const MI_NOMBRE = document.createElement('h2');
+	MI_NOMBRE.classList.add('text-tiny', 'text-bold', 'mt-2');
+	MI_NOMBRE.textContent = nombre;
+	MI_CONTENEDOR.appendChild(MI_NOMBRE);
+	// Texto
+	const MI_TEXTO = document.createElement('p');
+	MI_TEXTO.classList.add('my-2');
+	MI_TEXTO.textContent = texto;
+	MI_CONTENEDOR.appendChild(MI_TEXTO);
+	// Anyade todo a MENSAJES
+	MENSAJES.appendChild(MI_CONTENEDOR);
+}
+
+function enviarNuevoMensaje() {
+console.log("CLICKED");
+	if (CAMPO_NOMBRE.value == '' ) alert("Inserta nombre");
+	if (CAMPO_NOMBRE.value != '' || CAMPO_TEXTO.value != '') {
+		var CAMPOTEXTO = CAMPO_TEXTO.value;
+		var CAMPONOMBRE = CAMPO_NOMBRE.value;
+
+		firestore.collection("master").orderBy("lastCollection", "desc").limit(1)
+			.get()
+			.then((querySnapshot) => {
+				querySnapshot.forEach((doc) => {
+					var docTimestamp = Date.now();
+					var thisType;
+					var imageCanvas;
+					switch (currentType) {
+						case 1:
+							thisType=2;
+							CAMPOTEXTO="";
+							imageCanvas=CANVAS.toDataURL("image/png")
+							break;
+						case 2:
+							thisType=1;
+							imageCanvas = null
+							break;
+						default:
+							break;
+					}
+					
+					firestore.doc(doc.data().lastCollection + "/" + docTimestamp + "_1").set({
+						id: docTimestamp + "_1",
+						type: thisType, //1=texto,2=imagen (siempre empezamos con texto)
+						user: CAMPONOMBRE,
+						text: CAMPOTEXTO,
+						image: imageCanvas,
+						stream: docTimestamp,
+					})
+					
+					.then(() => {
+						window.location.reload();
+						canvasEnable = false;
+						$( "#input-texto-enviar" ).prop( "disabled", true );
+						console.log(resWidth+" "+resHeight);
+					})
+					.catch((error) => {
+						console.error("Error writing document: ", error);
+					});
+
+				});
+			})
+			.catch((error) => {
+				console.log("Error getting documents: ", error);
+			});
+
+		//anyadirNuevoMensajeAlHTML(CAMPO_NOMBRE.value, CAMPO_TEXTO.value, true);
+		
+		CAMPO_TEXTO.value = '';
+		CAMPO_TEXTO.focus();
+		
+	}
+
+}
+
+// Enviar mensaje cuando se pulsa en el botón Enviar
+BOTON_ENVIAR.addEventListener('click', enviarNuevoMensaje);
+
+// Enviar mensaje cuando se pulsa en el teclado Enter
+CAMPO_TEXTO.addEventListener('keyup', (e) => e.keyCode === 13 ? enviarNuevoMensaje() : false);
+
+function getContextCanvas(){
+	if (canvas != null) {
+		return context = document.getElementById('canvas').getContext("2d");
+	}
+}
+
+var resWidth = $("#canvas").width();
+var resHeight = $("#canvas").height();
+var canvas = document.getElementById("canvas");
+if (canvas != null) {
+	context = document.getElementById('canvas').getContext("2d");
+	var clickX = new Array();
+	var clickY = new Array();
+	var clickDrag = new Array();
+	var paint;
+	var xx;
+	var yy;
+	var canvas;
+	context.scale(300 / resWidth, 150 / resHeight);
+
+	$('#canvas').mousedown(function (e) {
+		if(canvasEnable){
+		paint = true;
+		getMousePos(e)
+		addClick(xx, yy);
+		redraw();
+		}
+	});
+
+	$('#canvas').mousemove(function (e) {
+		if(canvasEnable){
+		if (paint) {
+			getMousePos(e)
+			addClick(xx, yy, true);
+			redraw();
+		}
+	}
+	});
+
+	$('#canvas').mouseup(function (e) {
+		if(canvasEnable){
+			
+		paint = false;
+		}
+	});
+
+	$('#canvas').mouseleave(function (e) {
+		if(canvasEnable){
+		paint = false;
+		}
+	});
+
+
+	function addClick(x, y, dragging) {
+		clickX.push(x);
+		clickY.push(y);
+		clickDrag.push(dragging);
+	}
+
+	function redraw() {
+		context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+		context.strokeStyle = "#000";
+		context.lineJoin = "round";
+		context.lineWidth = 3;
+		for (var i = 0; i < clickX.length; i++) {
+			context.beginPath();
+			if (clickDrag[i] && i) {
+				context.moveTo(clickX[i - 1], clickY[i - 1]);
+			} else {
+				context.moveTo(clickX[i] - 1, clickY[i]);
+			}
+			context.lineTo(clickX[i], clickY[i]);
+			context.closePath();
+			context.stroke();
+		}
+	}
+
+	function getMousePos(event) {
+		var rect = canvas.getBoundingClientRect();
+		xx = event.clientX - rect.left;
+		yy = event.clientY - rect.top;
+	}
+}
         </script>
     </body>
 </html>
